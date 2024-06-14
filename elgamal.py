@@ -282,7 +282,7 @@ def decrypt(key, cipher):
 
 def encrypt_vote(key, sPlaintext):
 	z = encode_vote(sPlaintext, key.iNumBits)
-	print("z encode: ",z)
+
 	# cipher_pairs list will hold pairs (c, d) corresponding to each integer in z
 	cipher_pairs = []
 	# i is an integer in z
@@ -336,7 +336,7 @@ def decode_vote(SPlaintext, iNumbit=1 ):
 	while (num >1) :
 		num = num//2
 		z += 1
-		print(z)
+
 	return  z
 def homomorphic(cipher1, cipher2, p):
 	# Split the input ciphertexts into lists of integers
@@ -356,23 +356,25 @@ def homomorphic(cipher1, cipher2, p):
 		cipher.append(f"{c1_product} {c2_product}")
 
 	return ' '.join(cipher)
+
+
 def test():
+	keys = generate_keys()
+	priv = keys['privateKey']
+	pub = keys['publicKey']
+	votes = ["0", "1", "0", "0", "1", "0", "1", "0"]
+	encrypts = []
+	for vote in votes :
+		  encrypts.append(encrypt_vote(pub,vote))
+    
+	homo = encrypts[0]
+	for i in range (1,len(encrypts)):
+		homo = homomorphic(homo,encrypts[i],pub.p)
 
-		keys = generate_keys()
-		priv = keys['privateKey']
+	print(decrypt_vote(priv, homo))	
 
-		pub = keys['publicKey']
 
-		message0 = "1"
-		message1 = "0"
-		message2 = "0"
-		cipher0 = encrypt_vote(pub, message0)
-		cipher1 = encrypt_vote(pub,message1)
-		cipher2 = encrypt_vote(pub,message2)
-		newci = homomorphic(cipher0,cipher1,pub.p)
-		newci2 = homomorphic(newci,cipher2,pub.p)
-		newp = decrypt_vote(priv,newci2)
-		print("newp",newp)
+
 
 
 
