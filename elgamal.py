@@ -1,6 +1,3 @@
-
-
-
 import random
 import math
 import sys
@@ -162,53 +159,57 @@ def encode(sPlaintext, iNumBits):
 				#where m[i] is the ith message byte
 
 		#return array of encoded integers
+		print("encode",z)
 		return z
 
 #decodes integers to the original message bytes
 def decode(aiPlaintext, iNumBits):
-		#bytes array will hold the decoded original message bytes
-		bytes_array = []
+    text = aiPlaintext
+    print(text)
+    # bytes array will hold the decoded original message bytes
+    bytes_array = []
 
-		#same deal as in the encode function.
-		#each encoded integer is a linear combination of k message bytes
-		#k must be the number of bits in the prime divided by 8 because each
-		#message byte is 8 bits long
-		k = iNumBits//8
+    # same deal as in the encode function.
+    # each encoded integer is a linear combination of k message bytes
+    # k must be the number of bits in the prime divided by 8 because each
+    # message byte is 8 bits long
+    k = iNumBits // 8
 
-		#num is an integer in list aiPlaintext
-		for num in aiPlaintext:
-				#get the k message bytes from the integer, i counts from 0 to k-1
-				for i in range(k):
-						#temporary integer
-						temp = num
-						#j goes from i+1 to k-1
-						for j in range(i+1, k):
-								#get remainder from dividing integer by 2^(8*j)
-								temp = temp % (2**(8*j))
-						#message byte representing a letter is equal to temp divided by 2^(8*i)
-						letter = temp // (2**(8*i))
-						#add the message byte letter to the byte array
-						bytes_array.append(letter)
-						#subtract the letter multiplied by the power of two from num so
-						#so the next message byte can be found
-						num = num - (letter*(2**(8*i)))
+    # num is an integer in list aiPlaintext
+    for num in aiPlaintext:
+        # get the k message bytes from the integer, i counts from 0 to k-1
+        for i in range(k):
+            # temporary integer
+            temp = num
+            # j goes from i+1 to k
+            for j in range(i + 1, k):
+                # get remainder from dividing integer by 2^(8*j)
+                temp = temp % (2**(8 * j))
+            # message byte representing a letter is equal to temp divided by 2^(8*i)
+            letter = temp // (2**(8 * i))
+            # add the message byte letter to the byte array
+            bytes_array.append(letter)
+            # subtract the letter multiplied by the power of two from num so
+            # the next message byte can be found
+            num = num - (letter * (2**(8 * i)))
 
-		#example
-		#if "You" were encoded.
-		#Letter        #ASCII
-		#Y              89
-		#o              111
-		#u              117
-		#if the encoded integer is 7696217 and k = 3
-		#m[0] = 7696217 % 256 % 65536 / (2^(8*0)) = 89 = 'Y'
-		#7696217 - (89 * (2^(8*0))) = 7696128
-		#m[1] = 7696128 % 65536 / (2^(8*1)) = 111 = 'o'
-		#7696128 - (111 * (2^(8*1))) = 7667712
-		#m[2] = 7667712 / (2^(8*2)) = 117 = 'u'
+    # example
+    # if "You" were encoded.
+    # Letter        #ASCII
+    # Y              89
+    # o              111
+    # u              117
+    # if the encoded integer is 7696217 and k = 3
+    # m[0] = 7696217 % 256 % 65536 / (2^(8*0)) = 89 = 'Y'
+    # 7696217 - (89 * (2^(8*0))) = 7696128
+    # m[1] = 7696128 % 65536 / (2^(8*1)) = 111 = 'o'
+    # 7696128 - (111 * (2^(8*1))) = 7667712
+    # m[2] = 7667712 / (2^(8*2)) = 117 = 'u'
 
-		decodedText = bytearray(b for b in bytes_array).decode('ascii')
+    decodedText = bytearray(b for b in bytes_array).decode('ascii')
 
-		return decodedText
+    return decodedText
+
 
 #generates public key K1 (p, g, h) and private key K2 (p, g, x)
 def generate_keys(iNumBits=256, iConfidence=32):
@@ -231,7 +232,6 @@ def generate_keys(iNumBits=256, iConfidence=32):
 #encrypts a string sPlaintext using the public key k
 def encrypt(key, sPlaintext):
 		z = encode(sPlaintext, key.iNumBits)
-
 	#cipher_pairs list will hold pairs (c, d) corresponding to each integer in z
 		cipher_pairs = []
 		#i is an integer in z
@@ -280,7 +280,63 @@ def decrypt(key, cipher):
 
 		return decryptedText
 
+def encrypt_vote(key, sPlaintext):
+	z = encode_vote(sPlaintext, key.iNumBits)
+	# cipher_pairs list will hold pairs (c, d) corresponding to each integer in z
+	cipher_pairs = []
+	# i is an integer in z
+	for i in z:
+		# pick random y from (0, p-1) inclusive
+		y = random.randint(0, key.p)
+		# c = g^y mod p
+		c = modexp(key.g, y, key.p)
+		# d = ih^y mod p
+		d = (i * modexp(key.h, y, key.p)) % key.p
+		# add the pair to the cipher pairs list
+		cipher_pairs.append([c, d])
+	encryptedStr = ""
+	for pair in cipher_pairs:
+		encryptedStr += str(pair[0]) + ' ' + str(pair[1]) + ' '
+	return encryptedStr
 
+def decrypt_vote(key, cipher):
+		# decrpyts each pair and adds the decrypted integer to list of plaintext integers
+		plaintext = []
+
+		cipherArray = cipher.split()
+		if (not len(cipherArray) % 2 == 0):
+			return "Malformed Cipher Text"
+		for i in range(0, len(cipherArray), 2):
+			# c = first number in pair
+			c = int(cipherArray[i])
+			# d = second number in pair
+			d = int(cipherArray[i + 1])
+
+			# s = c^x mod p
+			s = modexp(c, key.x, key.p)
+			# plaintext integer = ds^-1 mod p
+			plain = (d * modexp(s, key.p - 2, key.p)) % key.p
+			# add plain to list of plaintext integers
+			plaintext.append(plain)
+
+		decryptedText = decode_vote(plaintext, key.iNumBits)
+
+		return decryptedText
+def encode_vote(sPlaintext, iNumbit = 1):
+	z = []
+	if (sPlaintext == "0"):
+		z.append(1)
+	if (sPlaintext == "1"):
+		z.append(2)
+
+	return z
+def decode_vote(SPlaintext, iNumbit=1 ):
+	num = SPlaintext[0]
+	z = 0
+	while (num >0) :
+		num = num//2
+		z += 1
+	return  z
 def homomorphic(cipher1, cipher2, p):
 	# Split the input ciphertexts into lists of integers
 	list_ci1 = list(map(int, cipher1.split()))
@@ -306,13 +362,14 @@ def test():
 
 		pub = keys['publicKey']
 
-		message0 = "a"
-		message1 = "b"
-		cipher0 = encrypt(pub, message0)
-		cipher1 = encrypt(pub,message1)
+		message0 = "1"
+		message1 = "0"
+		cipher0 = encrypt_vote(pub, message0)
+		cipher1 = encrypt_vote(pub,message1)
 		newci = homomorphic(cipher0,cipher1,pub.p)
-		newp = decrypt(priv,newci)
-		print("new p",newp)
+		print("newci: ",newci)
+		newp = decrypt_vote(priv,newci)
+		print("newp",newp)
 
 		# plain1 = decrypt(priv, cipher1)
 		# plain0 = decrypt(priv, cipher0)
