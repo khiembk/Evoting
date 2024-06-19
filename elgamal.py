@@ -362,20 +362,17 @@ def test():
 	keys = generate_keys()
 	priv = keys['privateKey']
 	pub = keys['publicKey']
-	votes = ["0", "1", "0", "0", "1", "0", "1", "0"]
+	votes = ["0", "1", "0", "0", "1", "0", "1", "0", "1"]
 	encrypts = []
 	for vote in votes :
 		  encrypts.append(encrypt_vote(pub,vote))
-    
+
 	homo = encrypts[0]
 	for i in range (1,len(encrypts)):
 		homo = homomorphic(homo,encrypts[i],pub.p)
 
-	print(decrypt_vote(priv, homo))	
+	print("total vote : ",decrypt_vote(priv, homo))
 
 
-
-
-
-
-#test()
+if __name__ == "__main__":
+   test()
